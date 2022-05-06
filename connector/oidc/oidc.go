@@ -77,6 +77,8 @@ type Config struct {
 		GroupsKey string `json:"groups"` // defaults to "groups"
 	} `json:"claimMapping"`
 
+	// Add additional authorization request parameters to acceess IdP specific features.
+	// Take care not to override standard OICD authorization requests parameters.
 	AdditionalAuthRequestParams map[string]string `json:"additionalAuthRequestParams"`
 }
 
