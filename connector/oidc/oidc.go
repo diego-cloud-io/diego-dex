@@ -78,7 +78,6 @@ type Config struct {
 	} `json:"claimMapping"`
 
 	// Add additional authorization request parameters to acceess IdP specific features.
-	// Take care not to override standard OICD authorization requests parameters.
 	AdditionalAuthRequestParams map[string]string `json:"additionalAuthRequestParams"`
 }
 
@@ -93,6 +92,18 @@ var brokenAuthHeaderDomains = []string{
 // connectorData stores information for sessions authenticated by this connector
 type connectorData struct {
 	RefreshToken []byte
+}
+
+var managedAuthParams = []string{
+	// In this implementation and golang.org/x/oauth2
+	"client_id",
+	"state",
+	"hd",
+	"acr_values",
+	"response_type",
+	"scope",
+	"redirect_uri",
+	"prompt",
 }
 
 // Detect auth header provider issues for known providers. This lets users
@@ -214,6 +225,7 @@ func (c *oidcConnector) LoginURL(s connector.Scopes, callbackURL, state string) 
 	}
 
 	var opts []oauth2.AuthCodeOption
+
 	if len(c.hostedDomains) > 0 {
 		preferredDomain := c.hostedDomains[0]
 		if len(c.hostedDomains) > 1 {
@@ -233,6 +245,9 @@ func (c *oidcConnector) LoginURL(s connector.Scopes, callbackURL, state string) 
 
 	if len(c.additionalAuthRequestParams) > 0 {
 		for k, v := range c.additionalAuthRequestParams {
+			if contains(managedAuthParams, k) {
+				return "", fmt.Errorf("parameter '%s' is already managed by this connector", k)
+			}
 			opts = append(opts, oauth2.SetAuthURLParam(k, v))
 		}
 	}
@@ -417,4 +432,13 @@ func (c *oidcConnector) createIdentity(ctx context.Context, identity connector.I
 	}
 
 	return identity, nil
+}
+
+func contains(slice []string, value string) bool {
+	for _, v := range slice {
+		if v == value {
+			return true
+		}
+	}
+	return false
 }
